@@ -1,17 +1,27 @@
----
-title: 'Reproducible Research: Peer Assessment 1'
-author: "Borghetti"
-date: "Thursday, February 12, 2015"
-output:
-  html_document:
-    keep_md: yes
-  pdf_document: default
-  word_document: default
----
+# Reproducible Research: Peer Assessment 1
+Borghetti  
+Thursday, February 12, 2015  
 
 ## Initializing the library
-```{r}
+
+```r
 library(dplyr)
+```
+
+```
+## 
+## Attaching package: 'dplyr'
+## 
+## The following object is masked from 'package:stats':
+## 
+##     filter
+## 
+## The following objects are masked from 'package:base':
+## 
+##     intersect, setdiff, setequal, union
+```
+
+```r
 library(ggplot2)
 library(lubridate)
 ```
@@ -24,12 +34,14 @@ library(lubridate)
 
 We start by unzipping the activity data 
 
-```{r}
+
+```r
 unzip("./activity.zip")
 ```
 Now load the CSV file
 
-```{r}
+
+```r
 ad <- read.csv("activity.csv",stringsAsFactors = FALSE)
 ```
 
@@ -37,13 +49,15 @@ ad <- read.csv("activity.csv",stringsAsFactors = FALSE)
 
 Add a column which converts the date column into an R-friendly format.  
 Note that the `date` column and the `interval` column are used to create a new column called rdate
-```{r}
+
+```r
 ad <- mutate(ad,rdate=lubridate::ymd(date))
 ```
 
 Now we group the data by `rdate` to make it easier to do analysis 
 
-```{r}
+
+```r
 adg<- group_by(ad,rdate)
 ```
 
@@ -51,26 +65,58 @@ adg<- group_by(ad,rdate)
 ## What is mean total number of steps taken per day?
 
 1.  Calculate the total number of steps taken per day
-```{r}
+
+```r
 stepsperday<-summarise(adg,totalsteps=sum(steps))
 stepsperday
 ```
 
+```
+## Source: local data frame [61 x 2]
+## 
+##         rdate totalsteps
+## 1  2012-10-01         NA
+## 2  2012-10-02        126
+## 3  2012-10-03      11352
+## 4  2012-10-04      12116
+## 5  2012-10-05      13294
+## 6  2012-10-06      15420
+## 7  2012-10-07      11015
+## 8  2012-10-08         NA
+## 9  2012-10-09      12811
+## 10 2012-10-10       9900
+## ..        ...        ...
+```
+
 2.  Make a histogram of the total number of steps taken each day
 
-```{r}
-qplot(totalsteps,data=stepsperday, geom="histogram", binwidth=2500)
 
+```r
+qplot(totalsteps,data=stepsperday, geom="histogram", binwidth=2500)
 ```
+
+![](PA1_template_files/figure-html/unnamed-chunk-7-1.png) 
 
 3.  Calculate and report the mean and median of the total number of steps taken per day
 
 Note that there are `NA` values in this data at this point, so computing a `mean` or `median` would be pointless.  I therefore decided to compute the means and medians using `na.rm = TRUE`.  What this implies is that the denominator of the mean calculation will be smaller than if these values were filled in (as we will do in the next part of the assignment)
 
 
-```{r}
+
+```r
 mean(stepsperday$totalsteps,na.rm = TRUE)
+```
+
+```
+## [1] 10766.19
+```
+
+```r
 median(stepsperday$totalsteps,na.rm = TRUE)
+```
+
+```
+## [1] 10765
 ```
 
 
@@ -80,14 +126,33 @@ median(stepsperday$totalsteps,na.rm = TRUE)
 
 First we need to find the average steps per time slot (ignoring days).  Again we use `na.rm = TRUE`:
 
-```{r}
+
+```r
 adp<-group_by(ad,interval)
 perslot<-summarise(adp,meansteps=mean(steps, na.rm=TRUE))
 perslot
 ```
 
+```
+## Source: local data frame [288 x 2]
+## 
+##    interval meansteps
+## 1         0 1.7169811
+## 2         5 0.3396226
+## 3        10 0.1320755
+## 4        15 0.1509434
+## 5        20 0.0754717
+## 6        25 2.0943396
+## 7        30 0.5283019
+## 8        35 0.8679245
+## 9        40 0.0000000
+## 10       45 1.4716981
+## ..      ...       ...
+```
+
 Next we make the X-Y plot:
-```{r}
+
+```r
 plot(perslot$interval,perslot$meansteps,type="l", 
      ylab = "Average number of steps ",
      xlab = "Interval (timeslot)",
@@ -95,12 +160,19 @@ plot(perslot$interval,perslot$meansteps,type="l",
      )
 ```
 
+![](PA1_template_files/figure-html/unnamed-chunk-10-1.png) 
+
 
 
 2.  Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
 
-```{r}
+
+```r
 perslot$interval[which.max(perslot$meansteps)]
+```
+
+```
+## [1] 835
 ```
 
 
@@ -110,8 +182,13 @@ perslot$interval[which.max(perslot$meansteps)]
 
 Note that we are only counting the number of NAs occuring in the `steps` variable.
 
-```{r}
+
+```r
 sum(is.na(ad$steps))
+```
+
+```
+## [1] 2304
 ```
 
 
@@ -126,7 +203,8 @@ Now we need to fill in the missing values using the average timestep values.
 We will use a trick - first add an extra variable column containing the mean of all timesteps, then populate the missing step values with this mean.  Finally, we will re-sort the data to get it back to the original ordering (by date then interval)
 
 
-```{r}
+
+```r
 adfixed<- merge(ad,perslot, 
                 suffixes = c("",".mean"),
                 by="interval",
@@ -136,7 +214,6 @@ adfixed<- merge(ad,perslot,
 adfixed[is.na(adfixed$steps),"steps"]<-adfixed[is.na(adfixed$steps),"meansteps"]
 
 adfixed<-arrange(adfixed,date,interval)
-
 ```
 
 
@@ -144,31 +221,64 @@ adfixed<-arrange(adfixed,date,interval)
 
 we have to group our data again, then histogram it
 
-```{r}
 
+```r
 adfixedg<- group_by(adfixed,rdate)
 fixedstepsperday<-summarise(adfixedg,totalsteps=sum(steps))
 fixedstepsperday
-qplot(totalsteps,data=fixedstepsperday, geom="histogram", binwidth=2500)
+```
 
 ```
+## Source: local data frame [61 x 2]
+## 
+##         rdate totalsteps
+## 1  2012-10-01   10766.19
+## 2  2012-10-02     126.00
+## 3  2012-10-03   11352.00
+## 4  2012-10-04   12116.00
+## 5  2012-10-05   13294.00
+## 6  2012-10-06   15420.00
+## 7  2012-10-07   11015.00
+## 8  2012-10-08   10766.19
+## 9  2012-10-09   12811.00
+## 10 2012-10-10    9900.00
+## ..        ...        ...
+```
+
+```r
+qplot(totalsteps,data=fixedstepsperday, geom="histogram", binwidth=2500)
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-14-1.png) 
 
 Now we report mean and median. Note that there are no `NA` values in this data at this point.
 
 
-```{r}
+
+```r
 mean(fixedstepsperday$totalsteps)
+```
+
+```
+## [1] 10766.19
+```
+
+```r
 median(fixedstepsperday$totalsteps)
+```
+
+```
+## [1] 10766.19
 ```
 
 *Do these values differ from the estimates from the first part of the assignment?* 
 
 The mean did not change - it remained 
-`r trunc(mean(fixedstepsperday$totalsteps))`.
+1.0766\times 10^{4}.
 The median did change.  Before the `NA` values were replaced, the median was 
-`r trunc(median(stepsperday$totalsteps,na.rm = TRUE))`,
+1.0765\times 10^{4},
 and after they were replaced it became 
-`r trunc(median(fixedstepsperday$totalsteps))`
+1.0766\times 10^{4}
 
 
 *What is the impact of imputing missing data on the estimates of the total daily number of steps?*
@@ -183,8 +293,21 @@ The median does shift however.  The median is the value which holds the middle-r
 
 We will use the `chron` package since it offers a convenient way to check for whether a date is a weekend: `is.weekend(mydate)`.
 
-```{r}
+
+```r
 library(chron)
+```
+
+```
+## 
+## Attaching package: 'chron'
+## 
+## The following objects are masked from 'package:lubridate':
+## 
+##     days, hours, minutes, seconds, years
+```
+
+```r
 adfixed<-mutate(adfixed,weekend=as.factor(is.weekend(rdate)))
 adfixed$weekend<-factor(adfixed$weekend,
                         levels = c(TRUE, FALSE),
@@ -194,8 +317,8 @@ adfixed$weekend<-factor(adfixed$weekend,
 
 2.  Make a panel plot containing a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis). See the README file in the GitHub repository to see an example of what this plot should look like using simulated data.
 
-```{r}
 
+```r
 adfixedi<-group_by(adfixed,interval,weekend)
 fixedperslot<-summarise(adfixedi,meansteps=mean(steps))
 
@@ -206,8 +329,9 @@ ggplot(fixedperslot, aes(interval,meansteps))+
   ylab("Average number of steps taken per interval") +
   xlab("Interval (timeslot)")+
   ggtitle("Average number of steps taken in 5 minute interval")
-
 ```
+
+![](PA1_template_files/figure-html/unnamed-chunk-17-1.png) 
 
 
 
